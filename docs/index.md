@@ -4,7 +4,7 @@ This is the accompanying documentation for an old project of mine where in I had
 
 ### AROS's functionality
 
-AROS as it stands today is a minimalist OS which can boot up and execute an associated file which is attached with the OS during boot up. In terms of I/O AROS supports keyboard input and output to a VGA stule display. The code comprises with specific sections of x86 assembly which might not be compatible with all Intel and AMD based Laptops nd PC's.
+AROS as it stands today is a minimalist OS which can boot up and execute an associated file which is attached with the OS during boot up. In terms of I/O AROS supports keyboard input and output to a VGA style display. The code comprises with specific sections of x86 assembly which might not be compatible with all Intel and AMD based Laptops and PC's.
 
 ### Disclaimer
 
@@ -65,10 +65,11 @@ The code segment contains the actual code that is to be executed in memory. This
 The data segment contains the data such as constants, variables etc. which is required for the code to function. This section is indicated to the linker using the `.data` and the `.bss` attributes. The `.bss` section is used to reserve memory which variables that are to be declared later in the program and is a static field which is initialized with 0's in the memory.
 
 ### Stack Segment
-As the name implies, the stack segment is used for the program stack and is 
+As the name implies, the stack segment is used for the program stack and must be setup so that we can run non trivial C programms. We will be looking at setting up the stack segment in the following sections.
+
 ### Linker script
 While we have the header ready, we have not yet defined the memory address where the header must be placed. This is done by the linker and we must define the linker script according to the specification. From the previous section, we know that we must place the `.text` section at the 1MB mark which translates to `0x100000`. For now, we'll set the `.data` and the `.bss` section also to begin at this address.
-So translating this to a linker script, we get the following
+So translating this to a linker script, we get the following linker script:
 
 ```
 OUTPUT_FORMAT(elf32-i386)
@@ -81,3 +82,34 @@ SECTIONS
    .bss  : { *(.bss)  }
  }
 ```
+
+## Setting up the Stack Segment
+Before we speak about the stack segment, we must understand
+
+1. Memory Models in 32bit modes
+2. Segment registers
+
+When operating in 32bit mode, we utilize a memory model known as *flat memory model* in which any 32bit register can be utilized for memory addressing. This is in contrast to the Multi-Segmnent memory model which was primaryly used in the 16bit era and the iconic 8086 microprocessor. Short digression into the 8086 microprocessor, there are primarily two sets of registers
+1. General Purpose Registers
+2. Segment Registers
+
+### General Purpose Registers
+The list of 16bit GPR's are as follows
+1. AX: Accumulator register
+2. BX: Base register to be be used in conjunction with the segment register(default is DS)
+3. CX: Counter register
+4. DX: Data register
+5. SP: Stack Pointer which points to the top of the stack
+6. BP: Base Pointer which points to the base of the stack
+7. SI: Source Index which is to be used in conjunction with the segment register(default is DS)
+8. DI: Destination Index which is to be used in conjunction with the segment register(default is DS)
+
+The 32bit versions of these registers can be accessed in the 32bit protected mode by adding an E prefix (Ex:AX would be accessed as EAX)
+
+Note: These GPRs are specific to certain instructions, for example CX is implicitly used with loop instructions
+
+### Segment Registers
+Segment registers were extensively used in the 16bit era to hold the base address for each of the memory segments. This method allowed the 8086 to address upto 1MB of memory using 20bit address bus. In order to calculate the address of a variable, the content of the segment register was left shifted by 4bits and the contents of the corresponding offset address are summed to determine the physical address. A memory model which utilizes these segment registers is known as Multi-Segmented memory model which is in stark contrast to the flat memory model where no such partitioning exists.
+
+### Initializing Stack Segment
+The stack in the x86 architecture is a downward growing stack which means that the stack pointer is decremented everytime a `PUSH` instruction is encountered and is incremented when the `POP` instruction is incremented. Therefore, the base address of the stack must be set in such a way that no memory conflicts occur and data is not overwritten. For our simple OS, we will be allocating some memory in the 
