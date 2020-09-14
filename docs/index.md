@@ -32,7 +32,7 @@ Now that we know the fields which must be present, we also must know where these
 ### Assembly code
 Okay, now that we know where what needs to be in place for GRUB to recognize our kernel, we need to write code for the same. In theory, we could use C to implement this, but I'm going to perform this using assembly with the following snippet of code,
 ```assembly
-
+;set.asm
 section .text
 global loader
 
@@ -76,7 +76,7 @@ OUTPUT_FORMAT(elf32-i386)
 ENTRY(loader)
 SECTIONS
  {
-   . = 0x100000;
+   . = 1M;
    .text : { *(.text) }
    .data : { *(.data) }
    .bss  : { *(.bss)  }
@@ -112,4 +112,13 @@ Note: These GPRs are specific to certain instructions, for example CX is implici
 Segment registers were extensively used in the 16bit era to hold the base address for each of the memory segments. This method allowed the 8086 to address upto 1MB of memory using 20bit address bus. In order to calculate the address of a variable, the content of the segment register was left shifted by 4bits and the contents of the corresponding offset address are summed to determine the physical address. A memory model which utilizes these segment registers is known as Multi-Segmented memory model which is in stark contrast to the flat memory model where no such partitioning exists.
 
 ### Initializing Stack Segment
-The stack in the x86 architecture is a downward growing stack which means that the stack pointer is decremented everytime a `PUSH` instruction is encountered and is incremented when the `POP` instruction is incremented. Therefore, the base address of the stack must be set in such a way that no memory conflicts occur and data is not overwritten. For our simple OS, we will be allocating some memory in the 
+The stack in the x86 architecture is a downward growing stack which means that the stack pointer is decremented everytime a `PUSH` instruction is encountered and is incremented when the `POP` instruction is incremented. Therefore, the base address of the stack must be set in such a way that no memory conflicts occur and data is not overwritten. For our simple OS, we will be leaving the stack memory allocation job to the C compiler(gcc) and trusting the linker. One change that we must do to the linker script is to introduce a command that will combine all the `.bss` sections.
+```
+.bss:
+{
+  *(COMMON)
+		*(.bss)
+}
+
+```
+
