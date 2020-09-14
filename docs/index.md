@@ -117,7 +117,7 @@ The stack in the x86 architecture is a downward growing stack which means that t
 .bss:
 {
   *(COMMON)
-		*(.bss)
+  *(.bss)
 }
 
 ```
