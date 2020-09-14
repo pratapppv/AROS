@@ -33,22 +33,18 @@ Now that we know the fields which must be present, we also must know where these
 Okay, now that we know where what needs to be in place for GRUB to recognize our kernel, we need to write code for the same. In theory, we could use C to implement this, but I'm going to perform this using assembly with the following snippet of code,
 ```assembly
 ;set.asm
-section .text
+section         .text
+        align   4
+        dd      0x1BADB002
+        dd      0x00
+        dd      - (0x1BADB002)
+        
 global loader
-
-MAGIC_NUMBER equ 0x1BADB002
-
- align 4
-  DD MAGICN MAGIC_NUMBER
-  DD FLAGS 0x00000000
-  DD CHKSM -MAGIC_NUMBER
-
 extern vmain
-
 loader:
-  cli
-  call vmain
-  hlt
+        cli
+        call vmain
+        hlt
 ```
 ### Explanation of the code
 The first part of the assembly code loads the constants into memory and is pretty staight forward. Once the header is loaded onto memory, we are in position to call our C code which is the main kernel. In order to do so, we must first inform our assembler regarding the existance of the kernel's main function, the entry point, `vmain` which the line `extern vmain` accomplishes. Before calling `vmain` i.e pass execution controll to it, we need to clear the interrupts which the instruction `cli` does. The instruction `hlt` halts the CPU if ever the kernel stopped execution and passed execution controll back to this piece of assembly code. `align 4` ensures that our header is 4byte (32 bit) aligned.
@@ -122,3 +118,24 @@ The stack in the x86 architecture is a downward growing stack which means that t
 
 ```
 
+## Display
+With all the previous setup, we can now focus on writing code which allows us to interact with the software and allow it to display the result. At the very least, we require access to a display in order to print messages which will be helpful in debugging and keeping track of the tasks being performed. For this, we will be writing code for an old VGA-esq output with 8bit color depth. For now we will be writing the code to be white text on a black background, and can easily be extended to incorporate the supported color gamut.
+
+In order to understand how we interact with I/O devices we must understand the concept of memory mapped I/O, a concept in which external peripherals are mapped to the memory address space. Therefore, we must know the address for a display. Fortunately for us, the framebuffer's address is standardized (which you can learn more about [here](https://en.wikipedia.org/wiki/VGA_text_mode)) and is at `0x000B8000`. Since each entry is 16bits long, the address must be incremented by 16
+
+From the documentation we can see the frame format for every charecter  which is described as follows
+* [15-8]: ASCII code
+* [7-4]: Forground color code
+* [3-0]: Background color code
+
+For implementing this in a consize and easy to use manner, we will be defining a C structure with the requisit fields as shown in the below code snippet
+```C
+
+struct cf
+{
+  unsigned short int ch;
+  unsigned short int col = 0xF0;
+}__attribute__((packed));
+
+```
+In the above code snippet, the field `ch` stores the ASCII value of the charecter to be displayed and the field `col` holds information for the background and foreground color. The final element of the struct `__attribute__((packed))` is a compiler directive/flag which tells the compiler not to add padding to the struct ensuring that the bit fields are correctly populated.
