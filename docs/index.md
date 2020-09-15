@@ -134,12 +134,50 @@ For implementing this in a consize and easy to use manner, we will be defining a
 
 struct cf
 {
-  unsigned short int ch;
-  unsigned short int col = 0xF0;
+  unsigned char ch;
+  unsigned char col;
 }__attribute__((packed));
 
 ```
 In the above code snippet, the field `ch` stores the ASCII value of the charecter to be displayed and the field `col` holds information for the background and foreground color. The final element of the struct `__attribute__((packed))` is a compiler directive/flag which tells the compiler not to add padding to the struct ensuring that the bit fields are correctly populated.
+
+Now with this struct, we can write our own `putch()` function which will allow us to write text to the screen.
+
+```
+static unsigned short int horpos;
+static unsigned short int verpos;
+
+const short int VGA_HOR = 80;
+const short int VGA_VER = 25;
+
+void putch(char ch)
+{
+	cf* fb = (cf*)0xB8000;
+
+	cf data;
+	data.col = 0xF0;
+
+	if (verpos == VGA_VER - 1)
+		verpos = 0;
+
+	if (horpos == VGA_HOR - 1)
+	{
+		horpos = 0;
+		verpos++;
+	}
+	data.ch = ch;
+
+	if (ch == '\n')
+	{
+		horpos = 0;
+		verpos++;
+		return;
+	}
+
+	fb[verpos * VGA_HOR + horpos++] = data;
+}
+```
+The above C code is not in it's most compact form and written in a manner in which the logic is more or less explicitly stated.  
 
 ## Hello world Test
 Okay now that we have written so much code, we are in a position to get our OS to boot up and print a "Hello World" message as a verification of it's functionality. To do so, we need to setup our toolchain. For compiling our OS, I recommend the use of a 32bit PC running Linux. I personally use Ubuntu 16.04.6 for development on a 32bit PC as setting up a cross compiler, linker and GRUB for i386 on an AMD 64bit platform is a bit of a hassle.
@@ -183,6 +221,7 @@ The command to be executed is as follows:
 
 ### Linker
 The command to be executed is as follows:
+
 `gcc set.o kernel.o -T linker.ld -o aros -nostdlib -nodefaultlibs -lgcc`
 
 This command takes in the preious;y compiled `.o` files and gives us our final executable kernel which must be wrapped up along with our bootloader and converted into an `.iso` image. The flags/options are self explainatory.
@@ -210,4 +249,3 @@ menuentry "AROS" {
 With this as the folder setup, we can now execute the last command which is going to convert the folder tree and give us a bootable ISO image.
 
 `grub-mkrescue iso --output = AROS.iso`
-
