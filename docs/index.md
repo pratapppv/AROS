@@ -118,15 +118,16 @@ The stack in the x86 architecture is a downward growing stack which means that t
 
 ```
 
+
 ## Display
 With all the previous setup, we can now focus on writing code which allows us to interact with the software and allow it to display the result. At the very least, we require access to a display in order to print messages which will be helpful in debugging and keeping track of the tasks being performed. For this, we will be writing code for an old VGA-esq output with 8bit color depth. For now we will be writing the code to be white text on a black background, and can easily be extended to incorporate the supported color gamut.
 
 In order to understand how we interact with I/O devices we must understand the concept of memory mapped I/O, a concept in which external peripherals are mapped to the memory address space. Therefore, we must know the address for a display. Fortunately for us, the framebuffer's address is standardized (which you can learn more about [here](https://en.wikipedia.org/wiki/VGA_text_mode)) and is at `0x000B8000`. Since each entry is 16bits long, the address must be incremented by 16
 
 From the documentation we can see the frame format for every charecter  which is described as follows
-* [15-8]: ASCII code
-* [7-4]: Forground color code
-* [3-0]: Background color code
+* \[15-8 \]: ASCII code
+* \[7-4 \]: Forground color code
+* \[3-0 \]: Background color code
 
 For implementing this in a consize and easy to use manner, we will be defining a C structure with the requisit fields as shown in the below code snippet
 ```C
@@ -139,3 +140,63 @@ struct cf
 
 ```
 In the above code snippet, the field `ch` stores the ASCII value of the charecter to be displayed and the field `col` holds information for the background and foreground color. The final element of the struct `__attribute__((packed))` is a compiler directive/flag which tells the compiler not to add padding to the struct ensuring that the bit fields are correctly populated.
+
+## Hello world Test
+Okay now that we have written so much code, we are in a position to get our OS to boot up and print a "Hello World" message as a verification of it's functionality. To do so, we need to setup our toolchain. For compiling our OS, I recommend the use of a 32bit PC running Linux. I personally use Ubuntu 16.04.6 for development on a 32bit PC as setting up a cross compiler, linker and GRUB for i386 on an AMD 64bit platform is a bit of a hassle.
+Now for assembling our assembly loader file, we will be using `NASM` and for compiling our C code, we will be using `gcc`. `GCC` will also be used for linking our files.
+
+The flow will be the following
+* Using NASM to assemble our setup assembly file to into a .o file
+* Using GCC to compile our C code into a .o file
+* Using GCC-linker module to link the .o files giving us an executable
+* Using GRUB-mkrescue to convert our executable into an ISO file along with the GRUB bootloader
+
+### NASM
+The command to be executed is as follows:
+` nasm -f elf set.asm -o set.o `
+#### Breakdown of the command:
+`nasm` is used to invoke our assembler
+`-f elf` is used to define the output file to be in the ELF(Executable Linkable Format) file format
+`set.asm` is our input file
+`-o set.o` is used to define the output file name and extension
+
+### GCC
+The command to be executed is as follows:
+`gcc -c kernel.c -o kernel.o -ffreestanding`
+#### Breakdown of the command
+`gcc` is used to invoke our compiler
+`-c` flag is used to tell our compiler to compile the code, but not to link it
+`kernel.c` is our input C file
+`-o kernel.o` is used to define the output file name and extension
+`-ffreestanding` is used to define that the C code is going to be executed in a free standing environment without any standard libraries which the compiler would otherwise expect to be present and also that the entrypoint is not the main function.
+
+### Linker
+The command to be executed is as follows:
+`gcc set.o kernel.o -T linker.ld -o aros -nostdlib -nodefaultlibs -lgcc`
+
+This command takes in the preious;y compiled `.o` files and gives us our final executable kernel which must be wrapped up along with our bootloader and converted into an `.iso` image. The flags/options are self explainatory.
+
+### GRUB Bootloader
+Now we need to create a bunch of folders and configuratiion files before we can execute the command necessary to convert the entire tree into a bootable ISO image.
+The folder tree is as follows
+```
+iso
+|
+|->boot
+|   |->grub
+|   |   |-> grub.cfg
+|   |-> aros
+```
+Copy paste the executable file generated in the previous step inside the boot folder.
+The grub.cfg file is a configuration file which describes the kernel name, type and location in the above folder tree. It's contents are as follows
+```
+menuentry "AROS" {
+        multiboot /boot/aros
+}
+```
+*NOTE: DONOT CHANGE THE OPENING BRACKET LOCATION! *
+
+With this as the folder setup, we can now execute the last command which is going to convert the folder tree and give us a bootable ISO image.
+
+`grub-mkrescue iso --output = AROS.iso`
+
