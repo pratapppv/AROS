@@ -153,21 +153,32 @@ The flow will be the following
 
 ### NASM
 The command to be executed is as follows:
+
 ` nasm -f elf set.asm -o set.o `
+
 #### Breakdown of the command:
 `nasm` is used to invoke our assembler
+
 `-f elf` is used to define the output file to be in the ELF(Executable Linkable Format) file format
+
 `set.asm` is our input file
+
 `-o set.o` is used to define the output file name and extension
 
 ### GCC
 The command to be executed is as follows:
+
 `gcc -c kernel.c -o kernel.o -ffreestanding`
+
 #### Breakdown of the command
 `gcc` is used to invoke our compiler
+
 `-c` flag is used to tell our compiler to compile the code, but not to link it
+
 `kernel.c` is our input C file
+
 `-o kernel.o` is used to define the output file name and extension
+
 `-ffreestanding` is used to define that the C code is going to be executed in a free standing environment without any standard libraries which the compiler would otherwise expect to be present and also that the entrypoint is not the main function.
 
 ### Linker
@@ -194,7 +205,7 @@ menuentry "AROS" {
         multiboot /boot/aros
 }
 ```
-*NOTE: DONOT CHANGE THE OPENING BRACKET LOCATION! *
+*NOTE: DONOT CHANGE THE OPENING BRACKET LOCATION!*
 
 With this as the folder setup, we can now execute the last command which is going to convert the folder tree and give us a bootable ISO image.
 
