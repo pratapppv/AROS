@@ -132,11 +132,11 @@ From the documentation we can see the frame format for every charecter  which is
 For implementing this in a consize and easy to use manner, we will be defining a C structure with the requisit fields as shown in the below code snippet
 ```C
 
-struct cf
+typedef struct cf
 {
   unsigned char ch;
   unsigned char col;
-}__attribute__((packed));
+}__attribute__((packed)) cf;
 
 ```
 In the above code snippet, the field `ch` stores the ASCII value of the charecter to be displayed and the field `col` holds information for the background and foreground color. The final element of the struct `__attribute__((packed))` is a compiler directive/flag which tells the compiler not to add padding to the struct ensuring that the bit fields are correctly populated.
